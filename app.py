@@ -7,18 +7,14 @@ from core.tracker import DrowsinessTracker, State
 from core.alerts import AlertSystem
 import plotly.graph_objects as go
 from collections import deque
-
 detector = DetectionEngine()
 tracker = DrowsinessTracker()
 alerts = AlertSystem()
-
 ear_filter = KalmanFilter1D()
 mar_filter = KalmanFilter1D()
-
 ear_history = deque(maxlen=30)
 timestamps = deque(maxlen=30)
 frame_count = 0
-
 def process_frame(frame):
     global frame_count
     if frame is None: return None, go.Figure(), "0.00", "0.00", "N/A", "N/A", "0%"
@@ -35,20 +31,31 @@ def process_frame(frame):
         
         ear_l = calculate_ear(left_eye)
         ear_r = calculate_ear(right_eye)
-        ear = ear_filter.update((ear_l + ear_r) / 2.0)
+        ear = (ear_l + ear_r) / 2.0  # Removed Kalman lag for INSTANT detection!
         mar = mar_filter.update(calculate_mar(mouth))
         p, y, r = solve_head_pose(landmarks, frame.shape)
         
         state, perclos = tracker.update(ear, 0.25)
         
-        if state in [State.DROWSY_CRITICAL, State.MICROSLEEP]:
-            alerts.escalate(state)
+        # Continuously update the single unified alert system
+        alerts.update_state(state)
             
+        # Draw explicit eye tracking dots so user can SEE the tracking
+        for pt in left_eye:
+            cv2.circle(frame, (int(pt[0]), int(pt[1])), 2, (0, 255, 255), -1)
+        for pt in right_eye:
+            cv2.circle(frame, (int(pt[0]), int(pt[1])), 2, (0, 255, 255), -1)
         # UI overlays
         color = (0, 255, 0)
-        if state == State.DROWSY_WARNING: color = (0, 255, 255)
-        elif state == State.DROWSY_CRITICAL: color = (0, 0, 255)
-        elif state == State.MICROSLEEP: color = (255, 0, 255)
+        if state == State.DROWSY_WARNING: 
+            color = (0, 255, 255)
+            cv2.putText(frame, "WARNING!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color, 3)
+        elif state == State.DROWSY_CRITICAL: 
+            color = (0, 0, 255)
+            cv2.putText(frame, "CRITICAL: WAKE UP!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color, 3)
+        elif state == State.MICROSLEEP: 
+            color = (255, 0, 255)
+            cv2.putText(frame, "MICROSLEEP: VEHICLE STOPPING!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color, 3)
         
         if bbox:
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
@@ -61,12 +68,11 @@ def process_frame(frame):
     fig.update_layout(height=200, margin=dict(l=0, r=0, t=0, b=0), title="EAR Trend")
     
     return frame, fig, f"{ear:.2f}", f"{mar:.2f}", f"P:{p:.1f} Y:{y:.1f} R:{r:.1f}", state.value, f"{perclos*100:.1f}%"
-
 with gr.Blocks(theme=gr.themes.Monochrome()) as demo:
     gr.Markdown("# SENTINEL v2.0 - Driver Monitoring")
     with gr.Row():
         with gr.Column(scale=2):
-            video_input = gr.Image(sources=["webcam", "upload"], streaming=True)
+            video_input = gr.Image(sources=["webcam"], streaming=True)
             annotated_video = gr.Image()
             video_input.stream(process_frame, [video_input], [
                 annotated_video, 

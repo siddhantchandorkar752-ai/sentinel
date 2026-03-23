@@ -1,23 +1,26 @@
 from enum import Enum
 from core.algorithms import PERCLOSCalculator
-
 class State(Enum):
     ALERT = "ALERT"
     DROWSY_WARNING = "DROWSY_WARNING"
     DROWSY_CRITICAL = "DROWSY_CRITICAL"
     MICROSLEEP = "MICROSLEEP"
-
 class DrowsinessTracker:
     def __init__(self, fps=30):
         self.fps = fps
         self.consecutive_closed_frames = 0
-        self.microsleep_threshold = fps * 3  # 3 seconds
-        self.warning_threshold = fps * 1     # 1 second
+        
+        # EXTREME SENSITIVITY THRESHOLDS
+        self.warning_threshold = 2      # ~0.06s instant alarm (basically an immediate blink triggers it if they pause)
+        self.microsleep_threshold = 8   # ~0.25s for full auto vehicle stop (very aggressive)
+        
         self.perclos = PERCLOSCalculator(history_size=fps * 60)
         self.current_state = State.ALERT
         
     def update(self, ear: float, ear_thresh: float) -> State:
-        is_closed = ear < ear_thresh
+        # Increase the physical threshold slightly so half-closed eyes trigger it
+        adjusted_thresh = ear_thresh * 1.05 
+        is_closed = ear < adjusted_thresh
         perclos_val = self.perclos.update(is_closed)
         
         if is_closed:
