@@ -1,17 +1,23 @@
+---
+title: SENTINEL v2.0
+emoji: 🚗
+colorFrom: gray
+colorTo: red
+sdk: gradio
+sdk_version: 4.0.0
+app_file: app.py
+pinned: false
+---
+
 # SENTINEL v2.0
 
-Real-Time Driver Drowsiness & Distraction Detection System for production environments.
+Real-Time Driver Drowsiness & Distraction Detection System.
 
-## Architecture Highlights
-- **Multi-Modal Detection**: YOLOv8 + MediaPipe FaceMesh
-- **Deep Learning**: MobileNetV3 (PyTorch -> ONNX Runtime)
-- **Algorithms**: EAR, MAR, Head Pose (solvePnP), PERCLOS, Kalman Filtering
-- **Analytics & API**: FastAPI + SQLite
-- **UI**: Gradio 4.x
-- **Containerization**: Docker with CUDA 11.8 support
+## 🔥 Features
+- Multi-Modal Detection (YOLOv8 + MediaPipe)
+- EAR, MAR, Head Pose, PERCLOS
+- Real-time Alerts
+- Live Webcam Monitoring
 
-## Quickstart
-1. `copy .env.example .env` and update variables
-2. `docker-compose up --build`
-3. Access UI at `http://localhost:7860`
-4. Access API Docs at `http://localhost:8000/docs`
+## ⚠️ Note
+This Space runs a **lightweight version** (no Docker / GPU).
